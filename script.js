@@ -103,6 +103,71 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  /* ---------------- Testimonial carousel ---------------- */
+  document.querySelectorAll("[data-carousel]").forEach((root) => {
+    const track = root.querySelector(".carousel-track");
+    const viewport = root.querySelector(".carousel-viewport");
+    const prev = root.querySelector(".carousel-prev");
+    const next = root.querySelector(".carousel-next");
+    const dotsWrap = root.querySelector(".carousel-dots");
+    if (!track || !viewport) return;
+
+    const slides = Array.from(track.children);
+    const n = slides.length;
+    let i = 0;
+
+    // Build dots.
+    const dots = [];
+    if (dotsWrap) {
+      slides.forEach((_, idx) => {
+        const d = document.createElement("button");
+        d.type = "button";
+        d.className = "dot" + (idx === 0 ? " is-active" : "");
+        d.setAttribute("aria-label", `Go to review ${idx + 1}`);
+        d.addEventListener("click", () => go(idx));
+        dotsWrap.appendChild(d);
+        dots.push(d);
+      });
+    }
+
+    function go(idx) {
+      i = Math.max(0, Math.min(n - 1, idx));
+      track.style.transform = `translateX(-${i * 100}%)`;
+      if (prev) prev.disabled = i === 0;
+      if (next) next.disabled = i === n - 1;
+      dots.forEach((d, di) => d.classList.toggle("is-active", di === i));
+    }
+    if (prev) prev.addEventListener("click", () => go(i - 1));
+    if (next) next.addEventListener("click", () => go(i + 1));
+
+    // Pointer / touch drag — slide left/right to change card.
+    let startX = 0, dx = 0, dragging = false;
+    viewport.addEventListener("pointerdown", (e) => {
+      dragging = true; dx = 0; startX = e.clientX;
+      track.style.transition = "none";
+      try { viewport.setPointerCapture(e.pointerId); } catch (_) {}
+    });
+    viewport.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      dx = e.clientX - startX;
+      const pct = i * 100 - (dx / viewport.offsetWidth) * 100;
+      track.style.transform = `translateX(-${pct}%)`;
+    });
+    const endDrag = () => {
+      if (!dragging) return;
+      dragging = false;
+      track.style.transition = "";
+      if (dx < -45) go(i + 1);
+      else if (dx > 45) go(i - 1);
+      else go(i);
+      dx = 0;
+    };
+    viewport.addEventListener("pointerup", endDrag);
+    viewport.addEventListener("pointercancel", endDrag);
+
+    go(0);
+  });
+
   /* ---------------- Interactive 3D particle ring ---------------- */
   const hero = document.querySelector(".hero");
   const canvas = document.getElementById("particles");
